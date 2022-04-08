@@ -1,7 +1,7 @@
 # arrays
 import numpy as np 
 # matrix exponent, and more
-from scipy.linalg import expm, sinm, cosm
+from scipy.linalg import expm
 
 def classical_reflecting(n, drift, diffusion, t, initial):
     #create hamiltonian
