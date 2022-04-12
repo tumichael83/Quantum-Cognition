@@ -59,10 +59,9 @@ def classical_sim(n, drift, diffusion, t):
         bar_plot = ax[i].bar(states_list, prob_list)
         for x, bar in enumerate(bar_plot): 
             ax[i].text(bar.get_x() + bar.get_width() / 2, bar.get_y()+bar.get_height(), str(prob_list[x]), ha="center", va="bottom")
-            ax[i].set_ylim([0,1])
-            yval = bar.get_height()
-
+        
         # fix each small graph
+        ax[i].set_ylim([0,1])
         ax[i].title.set_text("QRW timestep " +str(i))
         fig.tight_layout()
     
