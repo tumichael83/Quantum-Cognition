@@ -6,9 +6,9 @@ from scipy.linalg import expm
 # to graph things
 from matplotlib import pyplot as plt
 
-def classical_reflecting(n, drift, diffusion, t, target):
+def classical_reflecting(num_states, drift, diffusion, t, target):
     #create hamiltonian
-    h_dimension = n
+    h_dimension = num_states
     
     #drift diagonal
     a = np.zeros((1,h_dimension))
@@ -66,5 +66,5 @@ def classical_sim(n, drift, diffusion, t):
         ax[i].title.set_text("QRW timestep " +str(i))
         fig.tight_layout()
     
-    plt.savefig("./walk implementations/classical graphs/timestep=" + str(t), format='png')
+    plt.savefig("./classical graphs/timestep=" + str(t), format='png')
     plt.show()

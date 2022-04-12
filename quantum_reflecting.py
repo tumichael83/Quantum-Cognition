@@ -13,9 +13,9 @@ from qiskit.visualization import *
 #
 from qiskit.quantum_info.operators import Operator
 
-def quantum_reflecting(n, drift, diffusion, t):
+def quantum_reflecting(qubits, drift, diffusion, t):
     #create hamiltonian
-    h_dimension = 2**n
+    h_dimension = 2**qubits
     
     #drift diagonal
     a = np.zeros((1,h_dimension))
@@ -37,15 +37,15 @@ def quantum_reflecting(n, drift, diffusion, t):
     # obtain actual gate
     unitary_operator = Operator(U, input_dims = (h_dimension), output_dims = (h_dimension))
 
-    randwalk = QuantumCircuit (n,n)
+    randwalk = QuantumCircuit (qubits,qubits)
 
     # lst of qubits
     qlist = []
-    for i in range(n):
+    for i in range(qubits):
         qlist.append(i)
 
     # hadamard each qubit
-    for i in range(n):
+    for i in range(qubits):
         randwalk.h(i) 
         
     # add unitaries
@@ -71,8 +71,8 @@ def quantum_sim_qasm(qubits, drift, diffusion, t):
     for i in range(0,t):
         plot_histogram(quantum_reflecting(qubits,drift,diffusion,i),color='midnightblue', ax=ax[i])
         ax[i].title.set_text("QRW timestep " +str(i))
-        plt.ylim([0,1])
+        ax[i].set_ylim([0,1])
         fig.tight_layout()
     
-    plt.savefig("./walk implementations/quantum graphs/my timestep=" + str(t), format='png')
+    plt.savefig("./quantum graphs/timestep=" + str(t), format='png')
     plt.show()
