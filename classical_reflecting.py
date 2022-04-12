@@ -50,7 +50,7 @@ def classical_sim(n, drift, diffusion, t):
         states_list = ["|00>", "|01>", "|10>", "|11>"]
         bar_plot = plt.bar(states_list, prob_list)
 
-        # display, see cs290 doc from Raghav for details
+        # display, see csg290 doc from Raghav for details
         for bar in bar_plot:
             yval = bar.get_height()
             plt.text(bar.get_x()+0.2,yval+.01, round(yval, 3))

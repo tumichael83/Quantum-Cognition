@@ -1,4 +1,6 @@
 # any kind of matrix stuff
+from math import ceil
+from matplotlib import pyplot as plt
 import numpy as np
 # matrix exponent
 from scipy.linalg import expm
@@ -8,14 +10,12 @@ from qiskit import Aer, QuantumCircuit, execute, transpile
 from qiskit.providers.basicaer import QasmSimulatorPy
 # visualization
 from qiskit.visualization import *
-# the complete package
-from qiskit import terra
 #
 from qiskit.quantum_info.operators import Operator
 
-def quantum_reflecting(n, drift, diffusion, t, initial):
+def quantum_reflecting(n, drift, diffusion, t):
     #create hamiltonian
-    h_dimension = n
+    h_dimension = 2**n
     
     #drift diagonal
     a = np.zeros((1,h_dimension))
@@ -24,7 +24,7 @@ def quantum_reflecting(n, drift, diffusion, t, initial):
         a[0,i] = drift - (h_dimension / 2) + i
     
     #diffusion diagonals
-    b = np.zeros(1, h_dimension - 1)
+    b = np.zeros((1, h_dimension - 1))
     for i in range(0, h_dimension - 1):
         b[0,i] = diffusion
     
@@ -45,7 +45,7 @@ def quantum_reflecting(n, drift, diffusion, t, initial):
         qlist.append(i)
 
     for i in range(n):
-        randwalk.h() # hadamard each qubit
+        randwalk.h(i) # hadamard each qubit
 
     randwalk.measure(qlist,qlist)
 
@@ -53,3 +53,19 @@ def quantum_reflecting(n, drift, diffusion, t, initial):
     backend = Aer.get_backend('qasm_simulator')
     job = execute(randwalk, backend, shots=10000).result() # get to call the shots
     return job.get_counts()
+
+def quantum_sim_qasm(qubits, drift, diffusion, t):
+    #compute num rows required
+    nrows = ceil(t/3)
+    fig, ax = plt.subplots(nrows, 3, figsize = (t,10))
+    fig.suptitle("QASM Simulation of Reflecting Boundaries QRW with drift=" +str(drift) + " & diffusion=" + str(diffusion))
+    ax = ax.flatten()
+
+    for i in range(0,t):
+        plot_histogram(quantum_reflecting(qubits,drift,diffusion,i),color='midnightblue', ax=ax[i])
+        ax[i].title.set_text("QRW timestep " +str(i))
+        plt.ylim([0,1])
+        fig.tight_layout()
+    
+    plt.savefig("./walk implementations/quantum graphs/timestep=" + str(t), format='png')
+    #plt.show()
