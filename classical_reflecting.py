@@ -1,4 +1,5 @@
 # arrays
+from math import ceil
 import numpy as np 
 # matrix exponent, and more
 from scipy.linalg import expm
@@ -34,25 +35,37 @@ def classical_reflecting(n, drift, diffusion, t, target):
     initial = [1/2, 1/2, 1/2, 1/2]
 
     # calculate each prob according to the formula
-    prob = abs(np.linalg.norm(measure @ np.linalg.matrix_power(U, t) @ initial))
+    prob = abs(np.linalg.norm(measure @ np.linalg.matrix_power(U, t) @ initial))**2
 
     print("Probability of state " + str(target) + ": " + str(prob))
 
     return prob
 
 def classical_sim(n, drift, diffusion, t):
-    #setup
-    for t in range (0,t):
-        prob_list = []
-        for i in range(0,n):
-            prob_list.append(classical_reflecting(n, drift, diffusion, t, i))
-        print(prob_list)
-        states_list = ["|00>", "|01>", "|10>", "|11>"]
-        bar_plot = plt.bar(states_list, prob_list)
+    #compute num rows required
+    nrows = ceil(t/3)
+    fig, ax = plt.subplots(nrows, 3, figsize = (t,10))
+    fig.suptitle("QASM Simulation of Reflecting Boundaries QRW with drift=" +str(drift) + " & diffusion=" + str(diffusion))
+    ax = ax.flatten()
+    states_list = ["|00>", "|01>", "|10>", "|11>"]
 
-        # display, see csg290 doc from Raghav for details
-        for bar in bar_plot:
+    for i in range(0,t):
+        #get probs
+        prob_list = []
+        for j in range(0,n):
+            prob_list.append(round(classical_reflecting(n, drift, diffusion, i, j), 3))
+
+        # add bars on each small graph
+        bar_plot = ax[i].bar(states_list, prob_list)
+        for x, bar in enumerate(bar_plot): 
+            ax[i].text(bar.get_x() + bar.get_width() / 2, bar.get_y()+bar.get_height(), str(prob_list[x]), ha="center", va="top")
             yval = bar.get_height()
-            plt.text(bar.get_x()+0.2,yval+.01, round(yval, 3))
-        plt.savefig("./walk implementations/classical graphs/timestep=" + str(t), format='png')
-        plt.show()
+            plt.text(bar.get_x(),bar.get_y()+.01, round(yval, 3))
+
+        # fix each small graph
+        ax[i].title.set_text("QRW timestep " +str(i))
+        plt.ylim([0,1])
+        fig.tight_layout()
+    
+    plt.savefig("timestep=" + str(t), format='png')
+    plt.show()
