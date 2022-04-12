@@ -44,10 +44,17 @@ def quantum_reflecting(n, drift, diffusion, t):
     for i in range(n):
         qlist.append(i)
 
+    # hadamard each qubit
     for i in range(n):
-        randwalk.h(i) # hadamard each qubit
+        randwalk.h(i) 
+        
+    # add unitaries
+    for i in range(t):
+        randwalk.append(unitary_operator, qlist) # add unitary
 
     randwalk.measure(qlist,qlist)
+
+    #randwalk.draw(output='mpl')
 
     #running the job on QASM simulator
     backend = Aer.get_backend('qasm_simulator')
@@ -67,5 +74,5 @@ def quantum_sim_qasm(qubits, drift, diffusion, t):
         plt.ylim([0,1])
         fig.tight_layout()
     
-    plt.savefig("./walk implementations/quantum graphs/timestep=" + str(t), format='png')
-    #plt.show()
+    plt.savefig("./walk implementations/quantum graphs/my timestep=" + str(t), format='png')
+    plt.show()

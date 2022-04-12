@@ -45,7 +45,7 @@ def classical_sim(n, drift, diffusion, t):
     #compute num rows required
     nrows = ceil(t/3)
     fig, ax = plt.subplots(nrows, 3, figsize = (t,10))
-    fig.suptitle("QASM Simulation of Reflecting Boundaries QRW with drift=" +str(drift) + " & diffusion=" + str(diffusion))
+    fig.suptitle("Classical Simulation of Reflecting Boundaries QRW with drift=" +str(drift) + " & diffusion=" + str(diffusion))
     ax = ax.flatten()
     states_list = ["|00>", "|01>", "|10>", "|11>"]
 
@@ -58,14 +58,13 @@ def classical_sim(n, drift, diffusion, t):
         # add bars on each small graph
         bar_plot = ax[i].bar(states_list, prob_list)
         for x, bar in enumerate(bar_plot): 
-            ax[i].text(bar.get_x() + bar.get_width() / 2, bar.get_y()+bar.get_height(), str(prob_list[x]), ha="center", va="top")
+            ax[i].text(bar.get_x() + bar.get_width() / 2, bar.get_y()+bar.get_height(), str(prob_list[x]), ha="center", va="bottom")
+            ax[i].set_ylim([0,1])
             yval = bar.get_height()
-            plt.text(bar.get_x(),bar.get_y()+.01, round(yval, 3))
 
         # fix each small graph
         ax[i].title.set_text("QRW timestep " +str(i))
-        plt.ylim([0,1])
         fig.tight_layout()
     
-    plt.savefig("timestep=" + str(t), format='png')
+    plt.savefig("./walk implementations/classical graphs/timestep=" + str(t), format='png')
     plt.show()
