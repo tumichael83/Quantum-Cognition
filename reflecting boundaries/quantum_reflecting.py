@@ -5,11 +5,19 @@ import numpy as np
 # matrix exponent
 from scipy.linalg import expm
 # Aer is simultor, QC is circuit, execute executes, transpile is to adapt to real machines
-from qiskit import Aer, QuantumCircuit, execute, transpile
+from qiskit import Aer, QuantumCircuit, assemble, execute, transpile
 # visualization
 from qiskit.visualization import *
 #
 from qiskit.quantum_info.operators import Operator
+# to use a backend: https://quantum-computing.ibm.com/lab/docs/iql/manage/account/ibmq
+from qiskit import IBMQ
+#set up backend
+IBMQ.load_account()
+provider = IBMQ.get_provider(group='yale-uni-1')
+mybackend = provider.get_backend('ibmq_manila')
+#mybackend = Aer.get_backend('qasm_simulator')
+config = mybackend.configuration()
 
 def gen_quantum_randwalk(qubits, drift, diffusion, t):
     #create hamiltonian
@@ -33,7 +41,7 @@ def gen_quantum_randwalk(qubits, drift, diffusion, t):
     U = expm(-(1j)*H)
 
     # obtain actual gate
-    unitary_operator = Operator(U, input_dims = (h_dimension), output_dims = (h_dimension))
+    unitary_operator = Operator(U, input_dims=(h_dimension), output_dims=(h_dimension))
 
     randwalk = QuantumCircuit (qubits,qubits)
 
@@ -52,21 +60,33 @@ def gen_quantum_randwalk(qubits, drift, diffusion, t):
 
     randwalk.measure(qlist,qlist)
 
+
+
     return randwalk
 
-# TODO: make this take backend as input
+# manual assembly like this will let the IBMQ object help us if we get too ambitious
+# because it can automatically split up bigger attempts
 def sim_qasm(circuit):
-    backend = Aer.get_backend('qasm_simulator')
-    job = execute(circuit, backend, shots=10000).result() # get to call the shots
-    return job.get_counts()
+    print('transpiling for '+config.backend_name+'...')
+    trans_rw = transpile(circuit, basis_gates=config.basis_gates)
+
+    print('assembling for '+config.backend_name+'...')
+    qobj = assemble(trans_rw, backend=mybackend,shots=1024)
+
+    print('running on '+config.backend_name+'...')
+    job = mybackend.run(qobj) # get to call the shots
+    result = job.result()
+
+    return result.get_counts()
 
 
 #TODO: make this take a backend as input
+#TODO: make this submit all the jobs at once instead of waiting for each one
 def graph_quantum_sim(qubits, drift, diffusion, t):
     #compute num rows required
     nrows = ceil(t/3)
     fig, ax = plt.subplots(nrows, 3, figsize = (t,10))
-    fig.suptitle("QASM Simulation of Reflecting Boundaries QRW with drift=" +str(drift) + " & diffusion=" + str(diffusion))
+    fig.suptitle(config.backend_name + " Simulation of Reflecting Boundaries QRW with drift=" +str(drift) + " & diffusion=" + str(diffusion))
     ax = ax.flatten()
 
     for i in range(0,t):
@@ -76,9 +96,10 @@ def graph_quantum_sim(qubits, drift, diffusion, t):
         ax[i].set_ylim([0,1])
         fig.tight_layout()
 
-    # the biggest quantum circuit
-    randwalk.draw('mpl', filename="./walk implementations/reflecting boundaries/quantum graphs/figure.png")
-
     # the distrigutions
     plt.savefig("./walk implementations/reflecting boundaries/quantum graphs/timestep=" + str(t), format='png')
+    plt.show()
+
+    # the biggest quantum circuit
+    transpile(randwalk, basis_gates=config.basis_gates).draw('mpl', filename="./walk implementations/reflecting boundaries/quantum circuit diagrams/figure.png")
     plt.show()

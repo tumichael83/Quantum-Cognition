@@ -62,7 +62,7 @@ def classical_sim(n, drift, diffusion, t):
     fig.suptitle("Classical Simulation of Absorbing Boundaries QRW with drift=" +str(drift) + " & diffusion=" + str(diffusion))
     ax = ax.flatten()
 
-    bin_len = str(ceil(log(n, 2)))
+    bin_len = str(ceil(log(n, 2))) # how many 0s to pad to
     states_list = [format(state, '0'+bin_len+'b') for state in range(0,n)]
 
     for i in range(0,t):

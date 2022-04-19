@@ -5,16 +5,20 @@ import numpy as np
 # matrix exponent
 from scipy.linalg import expm
 # Aer is simultor, QC is circuit, execute executes, transpile is to adapt to real machines
-from qiskit import Aer, QuantumCircuit, execute, transpile
+from qiskit import Aer, QuantumCircuit, execute
 # visualization
 from qiskit.visualization import *
-#
+# Unitary operator
 from qiskit.quantum_info.operators import Operator
+# no idea what this does
+from qiskit.result import marginal_counts
 
-# I'm only going to use a 4 qubit walk on this for now
-def gen_quantum_randwalk(qubits, drift, diffusion, t):
+# I'm only going to use a 2 qubit walk on this for now
+def gen_quantum_randwalk(state_qubits, drift, diffusion, t):
     #create hamiltonian
-    h_dimension = 2**qubits
+    h_dimension = 2**state_qubits
+
+    total_qubits = state_qubits + 1 # hardcoded 1 for 1 ancilla
 
     #drift diagonal
     a = np.zeros((1,h_dimension))
@@ -36,41 +40,57 @@ def gen_quantum_randwalk(qubits, drift, diffusion, t):
     # obtain actual gate
     unitary_operator = Operator(U, input_dims = (h_dimension), output_dims = (h_dimension))
 
-    randwalk = QuantumCircuit (qubits,qubits)
+    # measure ancilla after every unitary apart from last (t-1), then measure state qubits
+    randwalk = QuantumCircuit (total_qubits, t + state_qubits)
 
-    # lst of qubits
+    # lst of state_qubits
     qlist = []
-    for i in range(qubits):
+    for i in range(state_qubits):
         qlist.append(i)
 
-    # hadamard each qubit
-    for i in range(qubits):
+    # hadamard each state qubit
+    for i in range(state_qubits):
         randwalk.h(i)
 
-    # add unitaries
-    for i in range(t):
+    # unitaries and ancilla before final measurement
+    for i in range(t - 1):
         randwalk.append(unitary_operator, qlist) # add unitary
 
-    randwalk.measure(qlist,qlist)
+        ## currently this is just one ancilla qubit!!!!!!
+        ## total_qubits - 1 is the index of the ancilla qubit
+        ## we reset the ancilla state_qubits number of times to clear it
+        ## before we measure
+
+        randwalk.reset([state_qubits]*(total_qubits - 1))
+        for j in range(state_qubits):
+            randwalk.cx(j, total_qubits - 1)
+        randwalk.measure(total_qubits-1, i)
+
+    # final unitary (without ancilla)
+    randwalk.append(unitary_operator, qlist)
+
+    # the list expansion on the right is just to measure the bits in
+    # qindex onto the very last cbits
+    randwalk.measure(qlist, [(t + qbIndex) for qbIndex in qlist])
 
     return randwalk
 
 # TODO: make this take backend as input
-def sim_qasm(circuit):
+def sim_qasm(circuit, t):
     backend = Aer.get_backend('qasm_simulator')
     job = execute(circuit, backend, shots=10000).result() # get to call the shots
     return job.get_counts()
-
 
 #TODO: make this take a backend as input
 def graph_quantum_sim(qubits, drift, diffusion, t):
     #compute num rows required
     nrows = ceil(t/3)
-    fig, ax = plt.subplots(nrows, 3, figsize = (t,10))
+    fig, ax = plt.subplots(nrows, 3, figsize = (16,10))
     fig.suptitle("QASM Simulation of Absorbing Boundaries QRW with drift=" +str(drift) + " & diffusion=" + str(diffusion))
     ax = ax.flatten()
 
     for i in range(0,t):
+        print("current timestep= " + str(i))
         randwalk = gen_quantum_randwalk(qubits,drift,diffusion,i)
         plot_histogram(sim_qasm(randwalk),color='midnightblue', ax=ax[i])
         ax[i].title.set_text("QRW timestep " +str(i))
@@ -78,8 +98,8 @@ def graph_quantum_sim(qubits, drift, diffusion, t):
         fig.tight_layout()
 
     # the biggest quantum circuit
-    randwalk.draw('mpl', filename="./reflecting boundaries/quantum graphs/figure.png")
+    randwalk.draw('mpl', filename="./absorbing boundaries/quantum graphs/figure.png")
 
     # the distrigutions
-    plt.savefig("./reflecting boundaries/quantum graphs/timestep=" + str(t), format='png')
+    plt.savefig("./absorbing boundaries/quantum graphs/timestep=" + str(t), format='png')
     plt.show()
