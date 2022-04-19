@@ -6,3 +6,5 @@ __pycache__/
 *\ graphs/
 
 *.pdf
+
+.DS_store
