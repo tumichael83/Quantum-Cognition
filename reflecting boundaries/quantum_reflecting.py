@@ -68,10 +68,10 @@ def gen_quantum_randwalk(qubits, drift, diffusion, t):
 # because it can automatically split up bigger attempts
 def sim_qasm(circuit):
     print('transpiling for '+config.backend_name+'...')
-    trans_rw = transpile(circuit, basis_gates=config.basis_gates)
+    trans_c = transpile(circuit, basis_gates=config.basis_gates)
 
     print('assembling for '+config.backend_name+'...')
-    qobj = assemble(trans_rw, backend=mybackend,shots=1024)
+    qobj = assemble(trans_c, backend=mybackend,shots=8192)
 
     print('running on '+config.backend_name+'...')
     job = mybackend.run(qobj) # get to call the shots
@@ -84,8 +84,8 @@ def sim_qasm(circuit):
 #TODO: make this submit all the jobs at once instead of waiting for each one
 def graph_quantum_sim(qubits, drift, diffusion, t):
     #compute num rows required
-    nrows = ceil(t/3)
-    fig, ax = plt.subplots(nrows, 3, figsize = (t,10))
+    nrows = ceil((t+1)/3)
+    fig, ax = plt.subplots(nrows, 3, figsize = (16,10))
     fig.suptitle(config.backend_name + " Simulation of Reflecting Boundaries QRW with drift=" +str(drift) + " & diffusion=" + str(diffusion))
     ax = ax.flatten()
 
@@ -97,7 +97,7 @@ def graph_quantum_sim(qubits, drift, diffusion, t):
         fig.tight_layout()
 
     # the distrigutions
-    plt.savefig("./walk implementations/reflecting boundaries/quantum graphs/timestep=" + str(t), format='png')
+    plt.savefig("./walk implementations/reflecting boundaries/quantum graphs/"+config.backend_name+"-timestep=" + str(t)+'.png', format='png')
     plt.show()
 
     # the biggest quantum circuit
