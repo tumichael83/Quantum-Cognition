@@ -42,7 +42,7 @@ def classical_absorbing(num_states, drift, diffusion, t, target):
         N[i,i] = 1
     #print(N)
 
-    # iterate, discarding terminal states
+    # iterate, discarding terminal state
     if (t > 0):
         prev_steps = np.linalg.matrix_power(N @ U, t-1)
     else:
@@ -55,11 +55,11 @@ def classical_absorbing(num_states, drift, diffusion, t, target):
 
     return prob
 
-def classical_sim(n, drift, diffusion, t):
+def graph_state_probs(n, drift, diffusion, t):
     #compute num rows required
     numsubplots = t+1
     fig, ax = plt.subplots(ceil(sqrt(numsubplots)), ceil(sqrt(numsubplots)), figsize = (16,10))
-    fig.suptitle("Classical Simulation of Absorbing Boundaries QRW with drift=" +str(drift) + " & diffusion=" + str(diffusion))
+    fig.suptitle("Probability of Each State Prior to Absorption in Absorbing Boundaries QRW with drift=" +str(drift) + " & diffusion=" + str(diffusion))
     ax = ax.flatten()
 
     bin_len = str(ceil(log(n, 2))) # how many 0s to pad to
@@ -84,7 +84,40 @@ def classical_sim(n, drift, diffusion, t):
         ax[i].title.set_text("QRW timestep " +str(i))
         plt.tight_layout()
 
-    plt.savefig("./absorbing boundaries/classical graphs/timestep=" + str(t), format='png')
+    plt.savefig("./absorbing boundaries/classical graphs/pre-absorbing-states-timestep=" + str(t), format='png')
     plt.show()
 
 # TODO: Response probability
+def graph_per_step_prob(n, drift, diffusion, t):
+    #compute num rows required
+    numsubplots = t+1
+    fig, ax = plt.subplots(ceil(sqrt(numsubplots)), ceil(sqrt(numsubplots)), figsize = (16,10))
+    fig.suptitle("Probability of response at each timestep of Absorbing Boundaries QRW with drift=" +str(drift) + " & diffusion=" + str(diffusion))
+    ax = ax.flatten()
+
+    bin_len = str(ceil(log(n, 2))) # how many 0s to pad to
+    states_list = [format(state, '0'+bin_len+'b') for state in [0, (n-1)]]
+
+    for i in range(1, numsubplots):
+        print("adding step="+str(i))
+        #get probs
+        prob_list = []
+
+        # only add terminal states
+        prob_list.append(round(classical_absorbing(n, drift, diffusion, i, 0), 3))
+        prob_list.append(round(classical_absorbing(n, drift, diffusion, i, n-1), 3))
+
+        # add bars on each small graph
+        bar_plot = ax[i].bar(states_list, prob_list)
+        for x, bar in enumerate(bar_plot):
+            ax[i].text(bar.get_x() + bar.get_width() / 2, bar.get_y()+bar.get_height(), str(prob_list[x]), ha="center", va="bottom")
+            #plt.setp(ax[i].get_xticklabels(), rotation=30, horizontalalignment='right')
+            plt.tight_layout()
+
+        # fix each small graph
+        ax[i].set_ylim([0,0.3])
+        ax[i].title.set_text("QRW timestep " +str(i))
+        plt.tight_layout()
+
+    plt.savefig("./absorbing boundaries/classical graphs/per-step-decisions-timestep=" + str(t), format='png')
+    plt.show()

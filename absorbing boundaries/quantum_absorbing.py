@@ -41,7 +41,7 @@ def gen_quantum_randwalk(state_qubits, drift, diffusion, t):
     unitary_operator = Operator(U, input_dims = (h_dimension), output_dims = (h_dimension))
 
     # measure ancilla after every unitary apart from last (t-1), then measure state qubits
-    randwalk = QuantumCircuit (total_qubits, t + state_qubits)
+    randwalk = QuantumCircuit (total_qubits, t*(state_qubits-1) + state_qubits)
 
     # lst of state_qubits
     qlist = []
@@ -57,14 +57,19 @@ def gen_quantum_randwalk(state_qubits, drift, diffusion, t):
         randwalk.append(unitary_operator, qlist) # add unitary
 
         ## currently this is just one ancilla qubit!!!!!!
-        ## total_qubits - 1 is the index of the ancilla qubit
+        ## state_qubits  is the index of the ancilla qubit
         ## we reset the ancilla state_qubits number of times to clear it
         ## before we measure
 
-        randwalk.reset([state_qubits]*(total_qubits - 1))
-        for j in range(state_qubits):
-            randwalk.cx(j, total_qubits - 1)
-        randwalk.measure(total_qubits-1, i)
+        ancilla = state_qubits;
+
+        # measure each pair of qubits
+        for k in range(state_qubits-1):
+            randwalk.reset([ancilla]*(2))
+            randwalk.cx(k, ancilla)
+            randwalk.cx(k+1, ancilla)
+            randwalk.measure(ancilla, i*state_qubits + k)
+
 
     # final unitary (without ancilla)
     randwalk.append(unitary_operator, qlist)
