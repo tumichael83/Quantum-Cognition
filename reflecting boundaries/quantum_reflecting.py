@@ -66,7 +66,7 @@ def gen_quantum_randwalk(qubits, drift, diffusion, t):
 
 # manual assembly like this will let the IBMQ object help us if we get too ambitious
 # because it can automatically split up bigger attempts
-def sim_qasm(circuit):
+def simulate(circuit):
     print('transpiling for '+config.backend_name+'...')
     trans_c = transpile(circuit, basis_gates=config.basis_gates)
 
@@ -84,14 +84,14 @@ def sim_qasm(circuit):
 #TODO: make this submit all the jobs at once instead of waiting for each one
 def graph_quantum_sim(qubits, drift, diffusion, t):
     #compute num rows required
-    nrows = ceil((t+1)/3)
-    fig, ax = plt.subplots(nrows, 3, figsize = (16,10))
+    nrows = ceil(sqrt(t+1))
+    fig, ax = plt.subplots(nrows, nrows, figsize = (16,10))
     fig.suptitle(config.backend_name + " Simulation of Reflecting Boundaries QRW with drift=" +str(drift) + " & diffusion=" + str(diffusion))
     ax = ax.flatten()
 
     for i in range(0,t):
         randwalk = gen_quantum_randwalk(qubits,drift,diffusion,i)
-        plot_histogram(sim_qasm(randwalk),color='midnightblue', ax=ax[i])
+        plot_histogram(simulate(randwalk),color='midnightblue', ax=ax[i])
         ax[i].title.set_text("QRW timestep " +str(i))
         ax[i].set_ylim([0,1])
         fig.tight_layout()
