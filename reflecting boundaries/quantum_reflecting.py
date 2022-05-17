@@ -1,5 +1,5 @@
 # any kind of matrix stuff
-from math import ceil
+from math import ceil,sqrt
 from matplotlib import pyplot as plt
 import numpy as np
 # matrix exponent
@@ -15,8 +15,8 @@ from qiskit import IBMQ
 #set up backend
 IBMQ.load_account()
 provider = IBMQ.get_provider(group='yale-uni-1')
-mybackend = provider.get_backend('ibmq_manila')
-#mybackend = Aer.get_backend('qasm_simulator')
+#mybackend = provider.get_backend('ibmq_manila')
+mybackend = Aer.get_backend('qasm_simulator')
 config = mybackend.configuration()
 
 def gen_quantum_randwalk(qubits, drift, diffusion, t):
@@ -89,7 +89,7 @@ def graph_quantum_sim(qubits, drift, diffusion, t):
     fig.suptitle(config.backend_name + " Simulation of Reflecting Boundaries QRW with drift=" +str(drift) + " & diffusion=" + str(diffusion))
     ax = ax.flatten()
 
-    for i in range(0,t):
+    for i in range(0,t+1):
         randwalk = gen_quantum_randwalk(qubits,drift,diffusion,i)
         plot_histogram(simulate(randwalk),color='midnightblue', ax=ax[i])
         ax[i].title.set_text("QRW timestep " +str(i))
@@ -97,9 +97,9 @@ def graph_quantum_sim(qubits, drift, diffusion, t):
         fig.tight_layout()
 
     # the distrigutions
-    plt.savefig("./walk implementations/reflecting boundaries/quantum graphs/"+config.backend_name+"-timestep=" + str(t)+'.png', format='png')
+    plt.savefig("./reflecting boundaries/quantum graphs/"+config.backend_name+"-timestep=" + str(t)+'.png', format='png')
     plt.show()
 
     # the biggest quantum circuit
-    transpile(randwalk, basis_gates=config.basis_gates).draw('mpl', filename="./walk implementations/reflecting boundaries/quantum circuit diagrams/figure.png")
+    transpile(randwalk, basis_gates=config.basis_gates).draw('mpl', filename="./reflecting boundaries/quantum circuit diagrams/figure.png")
     plt.show()

@@ -61,6 +61,7 @@ def classical_sim(n, drift, diffusion, t):
         # add bars on each small graph
         bar_plot = ax[i].bar(states_list, prob_list)
         for x, bar in enumerate(bar_plot):
+            # probability label
             ax[i].text(bar.get_x() + bar.get_width() / 2, bar.get_y()+bar.get_height(), str(prob_list[x]), ha="center", va="bottom")
             #plt.setp(ax[i].get_xticklabels(), rotation=30, horizontalalignment='right')
             plt.tight_layout()

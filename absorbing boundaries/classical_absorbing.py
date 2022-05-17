@@ -51,7 +51,7 @@ def classical_absorbing(num_states, drift, diffusion, t, target):
     # calculate each prob according to the formula
     prob = abs(np.linalg.norm(measure @ U @ prev_steps @ initial))**2
 
-    print("Probability of state " + str(target) + ": " + str(prob))
+    #print("Probability of state " + str(target) + ": " + str(prob))
 
     return prob
 
