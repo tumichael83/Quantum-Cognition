@@ -15,9 +15,10 @@ from qiskit import IBMQ
 #set up backend
 IBMQ.load_account()
 provider = IBMQ.get_provider(group='yale-uni-1')
-#mybackend = provider.get_backend('ibmq_manila')
+#mybackend = provider.get_backend('ibmq_jakarta')
 mybackend = Aer.get_backend('qasm_simulator')
 config = mybackend.configuration()
+numshots = 100000 
 
 def gen_quantum_randwalk(qubits, drift, diffusion, t):
     #create hamiltonian
@@ -27,7 +28,7 @@ def gen_quantum_randwalk(qubits, drift, diffusion, t):
     a = np.zeros((1,h_dimension))
     for i in range(0, h_dimension):
         # placeholder value for drift
-        a[0,i] = drift - (h_dimension / 2) + i
+        a[0,i] = i*drift 
 
     #diffusion diagonals
     b = np.zeros((1, h_dimension - 1))
@@ -36,6 +37,7 @@ def gen_quantum_randwalk(qubits, drift, diffusion, t):
 
     # add diagonals to matrix
     H = np.diagflat(a) + np.diagflat(b,1) + np.diagflat(b,-1)
+    print(H)
 
     # compute the unitary
     U = expm(-(1j)*H)
@@ -68,10 +70,10 @@ def gen_quantum_randwalk(qubits, drift, diffusion, t):
 # because it can automatically split up bigger attempts
 def simulate(circuit):
     print('transpiling for '+config.backend_name+'...')
-    trans_c = transpile(circuit, basis_gates=config.basis_gates)
+    trans_c = transpile(circuit,backend=mybackend, basis_gates=config.basis_gates)
 
     print('assembling for '+config.backend_name+'...')
-    qobj = assemble(trans_c, backend=mybackend,shots=8192)
+    qobj = assemble(trans_c, backend=mybackend,shots=numshots)
 
     print('running on '+config.backend_name+'...')
     job = mybackend.run(qobj) # get to call the shots

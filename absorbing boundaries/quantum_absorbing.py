@@ -15,13 +15,13 @@ from qiskit import IBMQ
 #set up backend
 IBMQ.load_account()
 provider = IBMQ.get_provider(group='yale-uni-1')
-#mybackend = provider.get_backend('ibmq_manila')
-mybackend = Aer.get_backend('qasm_simulator')
+mybackend = provider.get_backend('ibmq_manila')
+#mybackend = Aer.get_backend('qasm_simulator')
 config = mybackend.configuration()
 
 
 #num shots to use when running
-numshots = 2**16
+numshots = 20000
 
 # I'm only going to use a 2 qubit walk on this for now
 def gen_quantum_randwalk(state_qubits, drift, diffusion, t):
@@ -118,7 +118,7 @@ def select_counts(circuit, qubits):
     for k in result_dict:
         good_runs[k[:qubits]] += result_dict[k] # treat it as valid, then check if its not
 
-        # selecting like this only works for 2 qubit walk
+        # selecting like this only works for 2 qubit walk and 1 ancilla
         if '0' in k[qubits:]:
             good_runs[k[:qubits]] -= result_dict[k]
 
