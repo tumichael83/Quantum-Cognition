@@ -15,13 +15,13 @@ from qiskit import IBMQ
 #set up backend
 IBMQ.load_account()
 provider = IBMQ.get_provider(group='yale-uni-1')
-mybackend = provider.get_backend('ibmq_manila')
-#mybackend = Aer.get_backend('qasm_simulator')
+#mybackend = provider.get_backend('ibmq_jakarta')
+mybackend = Aer.get_backend('qasm_simulator')
 config = mybackend.configuration()
 
 
 #num shots to use when running
-numshots = 20000
+numshots = 100000
 
 # I'm only going to use a 2 qubit walk on this for now
 def gen_quantum_randwalk(state_qubits, drift, diffusion, t):
@@ -90,9 +90,11 @@ def gen_quantum_randwalk(state_qubits, drift, diffusion, t):
 
     return randwalk
 
+# collect the time information from the result object
+# https://quantumcomputing.stackexchange.com/questions/3901/comparing-run-times-on-ibm-quantum-experience
 def run_backend(circuit):
     print('transpiling for '+config.backend_name+'...')
-    trans_c = transpile(circuit, basis_gates=config.basis_gates)
+    trans_c = transpile(circuit,backend=mybackend, basis_gates=config.basis_gates)
 
     print('assembling for '+config.backend_name+'...')
     qobj = assemble(trans_c, backend=mybackend,shots=numshots)
@@ -103,12 +105,11 @@ def run_backend(circuit):
 
     print(result.get_counts())
 
-    return result.get_counts()
+    return result
 
-
-# this renormalizes, which is kind of annoying
-def select_counts(circuit, qubits):
-    result_dict = run_backend(circuit)
+def select_counts(myresults, qubits):
+    #myresults = run_backend(circuit)
+    result_dict = myresults.get_counts()
     print("selecting valid runs...")
 
     good_runs = {}
@@ -122,7 +123,6 @@ def select_counts(circuit, qubits):
         if '0' in k[qubits:]:
             good_runs[k[:qubits]] -= result_dict[k]
 
-
     print(good_runs)
     return good_runs
 
@@ -132,13 +132,14 @@ def graph_quantum_sim(qubits, drift, diffusion, t):
     #compute num rows required
     numsubplots = t+1
     fig, ax = plt.subplots(ceil(sqrt(numsubplots)), ceil(sqrt(numsubplots)), figsize = (16,10))
-    fig.suptitle(config.backend_name + "Simulation of Absorbing Boundaries QRW with drift=" +str(drift) + " & diffusion=" + str(diffusion))
+    fig.suptitle(config.backend_name + " Absorbing Boundaries QRW with drift=" +str(drift) + " & diffusion=" + str(diffusion))
     ax = ax.flatten()
 
     for i in range(numsubplots):
         print("adding step="+str(i))
         # get probs
-        prob_dict = select_counts(gen_quantum_randwalk(qubits, drift, diffusion, i), qubits)
+        myresult = run_backend(gen_quantum_randwalk(qubits, drift, diffusion, i))
+        prob_dict = select_counts(myresult, qubits)
 
         states = list(prob_dict.keys())
         states.sort()
@@ -154,5 +155,5 @@ def graph_quantum_sim(qubits, drift, diffusion, t):
         plt.tight_layout()
 
     # the distrigutions
-    plt.savefig("./absorbing boundaries/quantum graphs/timestep=" + str(t), format='png')
+    plt.savefig("./absorbing boundaries/quantum graphs/"+config.backend_name+" timestep=" + str(t), format='png')
     plt.show()

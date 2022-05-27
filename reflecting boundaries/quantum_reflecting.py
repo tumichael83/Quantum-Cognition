@@ -15,10 +15,10 @@ from qiskit import IBMQ
 #set up backend
 IBMQ.load_account()
 provider = IBMQ.get_provider(group='yale-uni-1')
-#mybackend = provider.get_backend('ibmq_jakarta')
-mybackend = Aer.get_backend('qasm_simulator')
+mybackend = provider.get_backend('ibmq_jakarta')
+#mybackend = Aer.get_backend('qasm_simulator')
 config = mybackend.configuration()
-numshots = 100000 
+numshots = 10000 
 
 def gen_quantum_randwalk(qubits, drift, diffusion, t):
     #create hamiltonian
