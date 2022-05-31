@@ -22,7 +22,7 @@ provider = IBMQ.get_provider(group='yale-uni-1')
 mybackend = provider.get_backend('ibmq_santiago')
 #mybackend = Aer.get_backend('qasm_simulator')
 config = mybackend.configuration()
-numshots = 1000
+numshots = 20000
 
 yale_backends = ['ibmq_armonk',
 'ibmq_santiago',
@@ -40,8 +40,6 @@ yale_backends = ['ibmq_armonk',
 'ibm_perth']
 
 
-#num shots to use when running
-numshots = 100000
 
 # I'm only going to use a 2 qubit walk on this for now
 def gen_quantum_randwalk(state_qubits, drift, diffusion, t):
