@@ -2,22 +2,42 @@
 from math import ceil, sqrt
 from matplotlib import pyplot as plt
 import numpy as np
-# matrix exponent
-from scipy.linalg import expm
-# Aer is simultor, QC is circuit, execute executes, transpile is to adapt to real machines
-from qiskit import Aer, QuantumCircuit, execute, transpile, assemble
-# visualization
-from qiskit.visualization import *
-# Unitary operator
-from qiskit.quantum_info.operators import Operator
+from scipy.linalg import expm # matrix exponent
 
-from qiskit import IBMQ
+# circuit stuff
+from qiskit import QuantumCircuit
+from qiskit.quantum_info.operators import Operator
+from qiskit import transpile, assemble              # adapts stuff for backend
+
+from qiskit.visualization import *
+
+#timing info
+import datetime
+
+#simulators and systems
+from qiskit import Aer, IBMQ
 #set up backend
 IBMQ.load_account()
 provider = IBMQ.get_provider(group='yale-uni-1')
-#mybackend = provider.get_backend('ibmq_jakarta')
-mybackend = Aer.get_backend('qasm_simulator')
+mybackend = provider.get_backend('ibmq_santiago')
+#mybackend = Aer.get_backend('qasm_simulator')
 config = mybackend.configuration()
+numshots = 1000
+
+yale_backends = ['ibmq_armonk',
+'ibmq_santiago',
+'ibmq_bogota',
+'ibmq_lima',
+'ibmq_belem',
+'ibmq_quito',
+'simulator_statevector',
+'simulator_mps',
+'simulator_extended_stabilizer',
+'simulator_stabilizer',
+'ibmq_jakarta',
+'ibmq_manila',
+'ibm_lagos',
+'ibm_perth']
 
 
 #num shots to use when running
@@ -92,7 +112,14 @@ def gen_quantum_randwalk(state_qubits, drift, diffusion, t):
 
 # collect the time information from the result object
 # https://quantumcomputing.stackexchange.com/questions/3901/comparing-run-times-on-ibm-quantum-experience
-def run_backend(circuit):
+def run_backend(circuit, mybackend_name):
+
+    if mybackend_name in yale_backends:
+        mybackend = provider.get_backend(mybackend_name)
+    else:
+        mybackend = Aer.get_backend(mybackend_name)
+
+    config = mybackend.configuration()
     print('transpiling for '+config.backend_name+'...')
     trans_c = transpile(circuit,backend=mybackend, basis_gates=config.basis_gates)
 
@@ -101,14 +128,12 @@ def run_backend(circuit):
 
     print('running on '+config.backend_name+'...')
     job = mybackend.run(qobj) # get to call the shots
-    result = job.result()
 
-    print(result.get_counts())
+    return job
 
-    return result
-
-def select_counts(myresults, qubits):
+def select_counts(job, qubits):
     #myresults = run_backend(circuit)
+    myresults = job.result()
     result_dict = myresults.get_counts()
     print("selecting valid runs...")
 
@@ -126,25 +151,53 @@ def select_counts(myresults, qubits):
     print(good_runs)
     return good_runs
 
+def submit_jobs(qubits, drift, diffusion, t, backend):
+    # submit all the jobs
+    joblist = []
+    for i in range(0,t+1):
+        randwalk = gen_quantum_randwalk(qubits,drift,diffusion,i)
+        job = run_backend(randwalk, backend)
+
+        joblist.append(job)
+
+    return joblist
+
 
 #TODO: make this take a backend as input
-def graph_quantum_sim(qubits, drift, diffusion, t):
+def graph_quantum_sim(qubits, drift, diffusion, t, mybackend_name, joblist):
+
+    if mybackend_name in yale_backends:
+        mybackend = provider.get_backend(mybackend_name)
+    else:
+        mybackend = Aer.get_backend(mybackend_name)
+    config = mybackend.configuration()
+
+
+    f = open('absorbing boundaries/'+config.backend_name+'-results.txt', 'w')
+
+    # text file header
+    f.write('absorbing boundaries\n'+ config.backend_name + '\nqubits = ' + str(qubits) + '\ndrift = ' + str(drift) + '\ndiffusion = '+str(diffusion))
+    f.write('\n')
+
+
     #compute num rows required
     numsubplots = t+1
     fig, ax = plt.subplots(ceil(sqrt(numsubplots)), ceil(sqrt(numsubplots)), figsize = (16,10))
     fig.suptitle(config.backend_name + " Absorbing Boundaries QRW with drift=" +str(drift) + " & diffusion=" + str(diffusion))
     ax = ax.flatten()
 
-    for i in range(numsubplots):
-        print("adding step="+str(i))
-        # get probs
-        myresult = run_backend(gen_quantum_randwalk(qubits, drift, diffusion, i))
-        prob_dict = select_counts(myresult, qubits)
+    runtimes = []
+    for i, job in enumerate(joblist):
 
+        print("adding step="+str(i))
+
+        # probabilities
+        prob_dict = select_counts(job, qubits)
         states = list(prob_dict.keys())
         states.sort()
         vals = [prob_dict[s]/numshots for s in states]
 
+        # graph
         bar_plot = ax[i].bar(states, vals)
         for x,  bar in enumerate(bar_plot):
             ax[i].text(bar.get_x() + bar.get_width() / 2, bar.get_y()+bar.get_height(), str(round(vals[x], 3)), ha="center", va="bottom")
@@ -154,6 +207,20 @@ def graph_quantum_sim(qubits, drift, diffusion, t):
         ax[i].title.set_text("QRW timestep " +str(i))
         plt.tight_layout()
 
+        f.write('\n-----timestep '+str(i)+'-----\n')
+        for s in range(2**qubits):
+                f.write(str(s)+': '+str(vals[s])+'\n')
+
+        if mybackend_name in yale_backends:
+            runtimes.append(job.time_per_step()['COMPLETED'] - job.time_per_step()['RUNNING'])
+
+
     # the distrigutions
     plt.savefig("./absorbing boundaries/quantum graphs/"+config.backend_name+" timestep=" + str(t), format='png')
     plt.show()
+
+    runtime = sum(runtimes, datetime.timedelta())
+    f.write('\ntotal runningtime: '+str(runtime))
+    f.close()
+
+    return

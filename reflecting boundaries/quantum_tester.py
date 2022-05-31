@@ -1,4 +1,8 @@
 import quantum_reflecting as qr
-# for transpile
+import time
 
-qr.graph_quantum_sim(2,2,4,3)
+
+joblist = qr.submit_jobs(2,2,4,3,'qasm_simulator')
+
+joblist[-1].wait_for_final_state()
+qr.graph_quantum_sim(2,2,4,3, 'qasm_simulator', joblist)
