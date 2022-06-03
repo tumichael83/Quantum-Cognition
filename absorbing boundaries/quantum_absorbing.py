@@ -39,7 +39,7 @@ yale_backends = ['ibmq_armonk',
 'ibm_lagos',
 'ibm_perth']
 
-
+import pprint
 
 # I'm only going to use a 2 qubit walk on this for now
 def gen_quantum_randwalk(state_qubits, drift, diffusion, t):
@@ -98,7 +98,7 @@ def gen_quantum_randwalk(state_qubits, drift, diffusion, t):
             randwalk.reset([ancilla]*(1))
             randwalk.cx(k, ancilla)
             randwalk.cx(k+1, ancilla)
-            randwalk.measure(ancilla, i+k)
+            randwalk.measure(ancilla, i*(state_qubits-1)+k)
 
     randwalk.append(unitary_operator, qlist)
 
@@ -110,7 +110,7 @@ def gen_quantum_randwalk(state_qubits, drift, diffusion, t):
 
 # collect the time information from the result object
 # https://quantumcomputing.stackexchange.com/questions/3901/comparing-run-times-on-ibm-quantum-experience
-def run_backend(circuit, mybackend_name):
+def run_backend(qc_list, mybackend_name):
 
     if mybackend_name in yale_backends:
         mybackend = provider.get_backend(mybackend_name)
@@ -119,50 +119,49 @@ def run_backend(circuit, mybackend_name):
 
     config = mybackend.configuration()
     print('transpiling for '+config.backend_name+'...')
-    trans_c = transpile(circuit,backend=mybackend, basis_gates=config.basis_gates)
+    qc_list = transpile(qc_list ,backend=mybackend, basis_gates=config.basis_gates)
 
     print('assembling for '+config.backend_name+'...')
-    qobj = assemble(trans_c, backend=mybackend,shots=numshots)
+    qobj = assemble(qc_list , backend=mybackend,shots=config.max_shots)
 
     print('running on '+config.backend_name+'...')
     job = mybackend.run(qobj) # get to call the shots
 
-    return job
+    return job # the list of circuits is submitted with the index being the # of timesteps
 
-def select_counts(job, qubits):
+def select_counts(job, qubits, t):
     #myresults = run_backend(circuit)
-    myresults = job.result()
-    result_dict = myresults.get_counts()
+    qc_counts = job.result().get_counts()
     print("selecting valid runs...")
 
-    good_runs = {}
-    for state in range(2**qubits):
-        good_runs[format(state, '0'+str(qubits)+'b')] = 0
+    # no longer worrying about dictionaries and keys, now everything is just going to be in order
+    all_timesteps = []
+    for counts in qc_counts:
 
-    for k in result_dict:
-        good_runs[k[:qubits]] += result_dict[k] # treat it as valid, then check if its not
+        # the format turns each i into a binary string with <qubits> bits
+        final_states_counts = dict.fromkeys([format(i, '0'+str(qubits)+'b') for i in range(2**qubits)], 0)
 
-        # selecting like this only works for 2 qubit walk and 1 ancilla
-        if '0' in k[qubits:]:
-            good_runs[k[:qubits]] -= result_dict[k]
+        for k in counts.keys():
+            final_state = k[:qubits]
 
-    print(good_runs)
-    return good_runs
+            final_states_counts[final_state] += counts[k] # treat it as valid, then check if its not
 
-def submit_jobs(qubits, drift, diffusion, t, backend):
-    # submit all the jobs
-    joblist = []
-    for i in range(0,t+1):
-        randwalk = gen_quantum_randwalk(qubits,drift,diffusion,i)
-        job = run_backend(randwalk, backend)
+            start = qubits
+            step = qubits-1
+            end = start + step*t
 
-        joblist.append(job)
+            while start < end:
+                if '0'*(qubits-1) in k[start:start+step]:
+                    final_states_counts[final_state] -= counts[k]
+                    break
+                start+=step
 
-    return joblist
+        all_timesteps.append(final_states_counts)
+
+    return all_timesteps
 
 
-#TODO: make this take a backend as input
-def graph_quantum_sim(qubits, drift, diffusion, t, mybackend_name, joblist):
+def graph_quantum_sim(qubits, drift, diffusion, t, mybackend_name, job, save_dest):
 
     if mybackend_name in yale_backends:
         mybackend = provider.get_backend(mybackend_name)
@@ -171,7 +170,7 @@ def graph_quantum_sim(qubits, drift, diffusion, t, mybackend_name, joblist):
     config = mybackend.configuration()
 
 
-    f = open('absorbing boundaries/'+config.backend_name+'-results.txt', 'w')
+    f = open(save_dest+'/'+config.backend_name+'-timestep='+str(t)+'-results.txt', 'w')
 
     # text file header
     f.write('absorbing boundaries\n'+ config.backend_name + '\nqubits = ' + str(qubits) + '\ndrift = ' + str(drift) + '\ndiffusion = '+str(diffusion))
@@ -185,15 +184,17 @@ def graph_quantum_sim(qubits, drift, diffusion, t, mybackend_name, joblist):
     ax = ax.flatten()
 
     runtimes = []
-    for i, job in enumerate(joblist):
 
-        print("adding step="+str(i))
+    results = select_counts(job, qubits, t)
+
+    for i, step in enumerate(results):
+
+        print("graphing step="+str(i))
 
         # probabilities
-        prob_dict = select_counts(job, qubits)
-        states = list(prob_dict.keys())
+        states = list(step.keys())
         states.sort()
-        vals = [prob_dict[s]/numshots for s in states]
+        vals = [step[s]/config.max_shots for s in states]
 
         # graph
         bar_plot = ax[i].bar(states, vals)
@@ -202,7 +203,7 @@ def graph_quantum_sim(qubits, drift, diffusion, t, mybackend_name, joblist):
             plt.tight_layout()
 
         ax[i].set_ylim([0,1])
-        ax[i].title.set_text("QRW timestep " +str(i))
+        ax[i].title.set_text("t=" +str(i)+ ' (shots='+str(sum(step.values()))+'/'+str(config.max_shots)+')')
         plt.tight_layout()
 
         f.write('\n-----timestep '+str(i)+'-----\n')
@@ -213,8 +214,8 @@ def graph_quantum_sim(qubits, drift, diffusion, t, mybackend_name, joblist):
             runtimes.append(job.time_per_step()['COMPLETED'] - job.time_per_step()['RUNNING'])
 
 
-    # the distrigutions
-    plt.savefig("./absorbing boundaries/quantum graphs/"+config.backend_name+" timestep=" + str(t), format='png')
+    # the distributions
+    plt.savefig(save_dest+'/'+config.backend_name+" timestep=" + str(t), format='png')
     plt.show()
 
     runtime = sum(runtimes, datetime.timedelta())

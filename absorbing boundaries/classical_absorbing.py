@@ -55,7 +55,7 @@ def classical_absorbing(num_states, drift, diffusion, t, target):
 
     return prob
 
-def graph_state_probs(n, drift, diffusion, t):
+def graph_state_probs(n, drift, diffusion, t, save_dest):
     #compute num rows required
     numsubplots = t+1
     fig, ax = plt.subplots(ceil(sqrt(numsubplots)), ceil(sqrt(numsubplots)), figsize = (16,10))
@@ -84,11 +84,11 @@ def graph_state_probs(n, drift, diffusion, t):
         ax[i].title.set_text("QRW timestep " +str(i))
         plt.tight_layout()
 
-    plt.savefig("./absorbing boundaries/classical graphs/pre-absorbing-states-timestep=" + str(t), format='png')
+    plt.savefig(save_dest+"/pre-absorbing-states-timestep=" + str(t), format='png')
     plt.show()
 
 # TODO: Response probability
-def graph_per_step_prob(n, drift, diffusion, t):
+def graph_per_step_prob(n, drift, diffusion, t, save_dest):
     #compute num rows required
     numsubplots = t+1
     fig, ax = plt.subplots(ceil(sqrt(numsubplots)), ceil(sqrt(numsubplots)), figsize = (16,10))
@@ -119,5 +119,5 @@ def graph_per_step_prob(n, drift, diffusion, t):
         ax[i].title.set_text("QRW timestep " +str(i))
         plt.tight_layout()
 
-    plt.savefig("./absorbing boundaries/classical graphs/per-step-decisions-timestep=" + str(t), format='png')
+    plt.savefig(save_dest+"/per-step-decisions-timestep=" + str(t), format='png')
     plt.show()

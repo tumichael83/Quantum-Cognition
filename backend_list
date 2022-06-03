@@ -12,3 +12,5 @@
 'ibmq_manila',
 'ibm_lagos',
 'ibm_perth']
+
+['ibmq_santiago','ibmq_bogota','ibmq_lima','ibmq_belem','ibmq_quito','ibmq_jakarta','ibmq_manila','ibm_lagos','ibm_perth']
