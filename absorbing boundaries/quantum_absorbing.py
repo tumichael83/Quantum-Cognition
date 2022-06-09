@@ -22,7 +22,6 @@ provider = IBMQ.get_provider(group='yale-uni-1')
 mybackend = provider.get_backend('ibmq_santiago')
 #mybackend = Aer.get_backend('qasm_simulator')
 config = mybackend.configuration()
-numshots = 20000
 
 yale_backends = ['ibmq_armonk',
 'ibmq_santiago',
@@ -122,7 +121,8 @@ def run_backend(qc_list, mybackend_name):
     qc_list = transpile(qc_list ,backend=mybackend, basis_gates=config.basis_gates)
 
     print('assembling for '+config.backend_name+'...')
-    qobj = assemble(qc_list , backend=mybackend,shots=config.max_shots)
+    numshots = min(config.max_shots,100000)
+    qobj = assemble(qc_list , backend=mybackend,shots=numshots)
 
     print('running on '+config.backend_name+'...')
     job = mybackend.run(qobj) # get to call the shots
@@ -141,7 +141,7 @@ def select_counts(job, qubits, t):
         # the format turns each i into a binary string with <qubits> bits
         final_states_counts = dict.fromkeys([format(i, '0'+str(qubits)+'b') for i in range(2**qubits)], 0)
 
-        for k in counts.keys():
+        for k in sorted(counts.keys()):
             final_state = k[:qubits]
 
             final_states_counts[final_state] += counts[k] # treat it as valid, then check if its not
@@ -150,13 +150,16 @@ def select_counts(job, qubits, t):
             step = qubits-1
             end = start + step*t
 
+            print(str(k) + ': ' + str(counts[k]))
             while start < end:
                 if '0'*(qubits-1) in k[start:start+step]:
                     final_states_counts[final_state] -= counts[k]
+                    print(' '*start+'^')
                     break
                 start+=step
 
         all_timesteps.append(final_states_counts)
+        print(sum(final_states_counts.values()))
 
     return all_timesteps
 
@@ -168,14 +171,18 @@ def graph_quantum_sim(qubits, drift, diffusion, t, mybackend_name, job, save_des
     else:
         mybackend = Aer.get_backend(mybackend_name)
     config = mybackend.configuration()
-
+    numshots = min(config.max_shots, 100000)
 
     f = open(save_dest+'/'+config.backend_name+'-timestep='+str(t)+'-results.txt', 'w')
 
     # text file header
-    f.write('absorbing boundaries\n'+ config.backend_name + '\nqubits = ' + str(qubits) + '\ndrift = ' + str(drift) + '\ndiffusion = '+str(diffusion))
-    f.write('\n')
-
+    f.write('absorbing boundaries\n')
+    f.write(config.backend_name+'\n')
+    f.write('qubits = ' + str(qubits) + '\n')
+    f.write('drift = ' + str(drift) + '\n')
+    f.write('diffusion = '+str(diffusion)+'\n')
+    if mybackend_name in yale_backends:
+        f.write('JobID = '+str(job.job_id())+'\n')
 
     #compute num rows required
     numsubplots = t+1
@@ -194,7 +201,7 @@ def graph_quantum_sim(qubits, drift, diffusion, t, mybackend_name, job, save_des
         # probabilities
         states = list(step.keys())
         states.sort()
-        vals = [step[s]/config.max_shots for s in states]
+        vals = [step[s]/numshots for s in states]
 
         # graph
         bar_plot = ax[i].bar(states, vals)
@@ -203,12 +210,12 @@ def graph_quantum_sim(qubits, drift, diffusion, t, mybackend_name, job, save_des
             plt.tight_layout()
 
         ax[i].set_ylim([0,1])
-        ax[i].title.set_text("t=" +str(i)+ ' (shots='+str(sum(step.values()))+'/'+str(config.max_shots)+')')
+        ax[i].title.set_text("t=" +str(i)+ ' (shots='+str(sum(step.values()))+'/'+str(numshots)+')')
         plt.tight_layout()
 
-        f.write('\n-----timestep '+str(i)+'-----\n')
+        f.write('\n-----timestep '+str(i)+':'+str(sum(step.values()))+'-----\n')
         for s in range(2**qubits):
-                f.write(str(s)+': '+str(vals[s])+'\n')
+            f.write(str(s)+':\t'+str(vals[s])+'\n')
 
         if mybackend_name in yale_backends:
             runtimes.append(job.time_per_step()['COMPLETED'] - job.time_per_step()['RUNNING'])
