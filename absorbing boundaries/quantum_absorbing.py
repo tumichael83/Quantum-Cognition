@@ -115,6 +115,7 @@ def run_backend(qc_list, mybackend_name):
         mybackend = provider.get_backend(mybackend_name)
     else:
         mybackend = Aer.get_backend(mybackend_name)
+        print(mybackend_name)
 
     config = mybackend.configuration()
     print('transpiling for '+config.backend_name+'...')
@@ -150,11 +151,11 @@ def select_counts(job, qubits, t):
             step = qubits-1
             end = start + step*t
 
-            print(str(k) + ': ' + str(counts[k]))
+            #print(str(k) + ': ' + str(counts[k]))
             while start < end:
                 if '0'*(qubits-1) in k[start:start+step]:
                     final_states_counts[final_state] -= counts[k]
-                    print(' '*start+'^')
+                    #print(' '*start+'^')
                     break
                 start+=step
 
@@ -217,8 +218,8 @@ def graph_quantum_sim(qubits, drift, diffusion, t, mybackend_name, job, save_des
         for s in range(2**qubits):
             f.write(str(s)+':\t'+str(vals[s])+'\n')
 
-        if mybackend_name in yale_backends:
-            runtimes.append(job.time_per_step()['COMPLETED'] - job.time_per_step()['RUNNING'])
+        #if mybackend_name in yale_backends:
+            #runtimes.append(job.time_per_step()['COMPLETED'] - job.time_per_step()['RUNNING'])
 
 
     # the distributions

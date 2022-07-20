@@ -17,8 +17,6 @@ from qiskit import IBMQ
 #set up backend
 IBMQ.load_account()
 provider = IBMQ.get_provider(group='yale-uni-1')
-mybackend = provider.get_backend('ibmq_santiago')
-#mybackend = Aer.get_backend('qasm_simulator')
 config = mybackend.configuration()
 numshots = 1000
 
